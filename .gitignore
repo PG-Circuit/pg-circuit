@@ -1,0 +1,26 @@
+# Compiled objects
+*.o
+*.so
+*.bc
+*.dylib
+
+# PGXS / regression
+results/
+tmp_check/
+tmp_check_iso/
+tmp_install/
+log/
+test/regression.diffs
+test/regression.out
+*.diffs
+
+# Editor / OS
+.DS_Store
+*~
+*.swp
+.idea/
+.vscode/
+
+# Build leftovers
+pg_circuit.so
+bin/

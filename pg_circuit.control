@@ -1,0 +1,5 @@
+# pg_circuit extension
+comment = 'PG Circuit Community — adaptive runtime protection for PostgreSQL'
+default_version = '0.1.0'
+module_pathname = '$libdir/pg_circuit'
+relocatable = false

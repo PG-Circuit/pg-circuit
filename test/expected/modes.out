@@ -1,0 +1,52 @@
+-- modes: observe / warn / enforce behavior
+CREATE EXTENSION IF NOT EXISTS pg_circuit;
+NOTICE:  extension "pg_circuit" already exists, skipping
+DROP TABLE IF EXISTS mode_demo;
+NOTICE:  table "mode_demo" does not exist, skipping
+CREATE TABLE mode_demo (id int);
+INSERT INTO mode_demo VALUES (1), (2), (3);
+ANALYZE mode_demo;
+-- observe: never warns/blocks
+SET pg_circuit.mode = observe;
+DELETE FROM mode_demo;
+INSERT INTO mode_demo VALUES (1), (2), (3);
+ANALYZE mode_demo;
+-- warn: emits warning, does not block
+SET pg_circuit.mode = warn;
+DELETE FROM mode_demo;
+WARNING:  PG Circuit [PGC001] high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.mode_demo
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: WARN
+HINT:  set pg_circuit.mode=enforce to block, or reduce the operation scope
+SELECT count(*) FROM mode_demo;
+ count 
+-------
+     0
+(1 row)
+
+INSERT INTO mode_demo VALUES (1), (2), (3);
+ANALYZE mode_demo;
+-- enforce: blocks
+SET pg_circuit.mode = enforce;
+DELETE FROM mode_demo;
+ERROR:  PG Circuit [PGC001] blocked high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.mode_demo
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+SELECT count(*) FROM mode_demo;
+ count 
+-------
+     3
+(1 row)
+
+-- cleanup under observe
+SET pg_circuit.mode = observe;
+DROP TABLE mode_demo;

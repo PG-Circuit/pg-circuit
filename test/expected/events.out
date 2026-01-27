@@ -1,0 +1,44 @@
+-- events: WARN/BLOCK decisions land in bounded shared-memory history
+CREATE EXTENSION IF NOT EXISTS pg_circuit;
+NOTICE:  extension "pg_circuit" already exists, skipping
+CREATE TABLE events_demo (id int);
+INSERT INTO events_demo SELECT generate_series(1, 5);
+ANALYZE events_demo;
+SET pg_circuit.mode = warn;
+-- no-WHERE DELETE should WARN and be recorded
+DELETE FROM events_demo;
+WARNING:  PG Circuit [PGC001] high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 5
+Relation: public.events_demo
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: WARN
+HINT:  set pg_circuit.mode=enforce to block, or reduce the operation scope
+SELECT count(*) >= 1 AS has_event
+FROM pg_circuit_events();
+ has_event 
+-----------
+ t
+(1 row)
+
+SELECT decision, operation_type, risk_score > 0 AS scored,
+       rule_ids LIKE '%PGC001%' AS has_pgc001
+FROM pg_circuit_events()
+LIMIT 1;
+ decision | operation_type  | scored | has_pgc001 
+----------+-----------------+--------+------------
+ WARN     | delete_no_where | t      | t
+(1 row)
+
+-- ALLOW decisions are not stored
+SET pg_circuit.mode = observe;
+UPDATE events_demo SET id = id WHERE id = 1;
+SELECT count(*) FILTER (WHERE decision = 'ALLOW') = 0 AS no_allow_events
+FROM pg_circuit_events();
+ no_allow_events 
+-----------------
+ t
+(1 row)
+
+DROP TABLE events_demo;

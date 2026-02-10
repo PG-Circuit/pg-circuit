@@ -1,0 +1,28 @@
+-- privileges: inspection APIs are PUBLIC; fail_closed GUC present
+CREATE EXTENSION IF NOT EXISTS pg_circuit;
+NOTICE:  extension "pg_circuit" already exists, skipping
+SELECT extension_version, enabled, mode
+FROM pg_circuit_status();
+ extension_version | enabled | mode 
+-------------------+---------+------
+ 0.1.0             | t       | warn
+(1 row)
+
+SELECT runtime_mode IS NOT NULL AS can_runtime
+FROM pg_circuit_runtime_state();
+ can_runtime 
+-------------
+ t
+(1 row)
+
+SELECT count(*) >= 0 AS can_events FROM pg_circuit_events();
+ can_events 
+------------
+ t
+(1 row)
+
+SHOW pg_circuit.fail_closed;
+ pg_circuit.fail_closed 
+------------------------
+ off
+(1 row)

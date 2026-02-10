@@ -1,0 +1,91 @@
+-- destructive: PGC001-PGC005 detection (Community)
+CREATE EXTENSION IF NOT EXISTS pg_circuit;
+NOTICE:  extension "pg_circuit" already exists, skipping
+DROP TABLE IF EXISTS dest_users;
+NOTICE:  table "dest_users" does not exist, skipping
+CREATE TABLE dest_users (id int primary key, active bool);
+INSERT INTO dest_users VALUES (1, true), (2, true), (3, false);
+ANALYZE dest_users;
+SET pg_circuit.mode = enforce;
+-- PGC001 DELETE without WHERE => blocked
+DELETE FROM dest_users;
+ERROR:  PG Circuit [PGC001] blocked high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.dest_users
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+-- DELETE with WHERE => allowed
+DELETE FROM dest_users WHERE id = 1;
+SELECT count(*) FROM dest_users;
+ count 
+-------
+     2
+(1 row)
+
+-- PGC002 UPDATE without WHERE => blocked
+UPDATE dest_users SET active = false;
+ERROR:  PG Circuit [PGC002] blocked high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.dest_users
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+-- UPDATE with WHERE => allowed
+UPDATE dest_users SET active = false WHERE id = 2;
+SELECT active FROM dest_users ORDER BY id;
+ active 
+--------
+ f
+ f
+(2 rows)
+
+-- PGC003 TRUNCATE => blocked
+TRUNCATE dest_users;
+ERROR:  PG Circuit [PGC003] blocked high-risk operation
+DETAIL:  Risk: 90/100
+Estimated rows: 3
+Relation: public.dest_users
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+-- PGC004 DROP TABLE => blocked
+DROP TABLE dest_users;
+ERROR:  PG Circuit [PGC004] blocked high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.dest_users
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+-- WHERE-qualified DML stays quiet in Community (no blast-radius rules)
+CREATE TABLE tiny_demo AS SELECT g AS id FROM generate_series(1, 5) g;
+ANALYZE tiny_demo;
+DELETE FROM tiny_demo WHERE id <= 3;
+SELECT count(*) AS tiny_left FROM tiny_demo;
+ tiny_left 
+-----------
+         2
+(1 row)
+
+CREATE TABLE cov_demo AS
+  SELECT g AS id, false AS archived FROM generate_series(1, 20000) g;
+ANALYZE cov_demo;
+UPDATE cov_demo SET archived = true WHERE id BETWEEN 1 AND 20000;
+SELECT count(*) FILTER (WHERE archived) AS archived_ok FROM cov_demo;
+ archived_ok 
+-------------
+       20000
+(1 row)
+
+-- cleanup
+SET pg_circuit.mode = observe;
+DROP TABLE dest_users;
+DROP TABLE tiny_demo;
+DROP TABLE cov_demo;

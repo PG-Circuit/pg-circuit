@@ -1,0 +1,34 @@
+-- prepared: PREPARE/EXECUTE still go through risk analysis
+CREATE EXTENSION IF NOT EXISTS pg_circuit;
+NOTICE:  extension "pg_circuit" already exists, skipping
+CREATE TABLE prep_demo (id int);
+INSERT INTO prep_demo VALUES (1), (2), (3);
+ANALYZE prep_demo;
+SET pg_circuit.mode = enforce;
+PREPARE dangerous_del AS DELETE FROM prep_demo;
+EXECUTE dangerous_del;
+ERROR:  PG Circuit [PGC001] blocked high-risk operation
+DETAIL:  Risk: 95/100
+Estimated rows: 3
+Relation: public.prep_demo
+Runtime mode: NORMAL
+Replication lag: 0.0s
+Decision: BLOCK
+HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+SELECT count(*) FROM prep_demo;
+ count 
+-------
+     3
+(1 row)
+
+PREPARE safe_del AS DELETE FROM prep_demo WHERE id = $1;
+EXECUTE safe_del(1);
+SELECT count(*) FROM prep_demo;
+ count 
+-------
+     2
+(1 row)
+
+DEALLOCATE ALL;
+SET pg_circuit.mode = observe;
+DROP TABLE prep_demo;

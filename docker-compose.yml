@@ -1,0 +1,27 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PG_MAJOR: "17"
+    image: pg-circuit:local
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54329:5432"
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_circuit
+      - -c
+      - pg_circuit.enabled=on
+      - -c
+      - pg_circuit.mode=warn
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

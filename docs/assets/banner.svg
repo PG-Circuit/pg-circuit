@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="120" viewBox="0 0 560 120" role="img" aria-label="PG Circuit adaptive runtime protection">
+  <rect width="560" height="120" fill="#ffffff"/>
+  <g fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="square">
+    <path d="M18 18h22M18 18v22"/>
+    <path d="M102 18h-22M102 18v22"/>
+    <path d="M18 102h22M18 102v-22"/>
+    <path d="M102 102h-22M102 102v-22"/>
+  </g>
+  <text x="28" y="82" font-family="Helvetica, Arial, sans-serif" font-size="64" font-weight="800" fill="#000000">P</text>
+  <text x="52" y="90" font-family="Helvetica, Arial, sans-serif" font-size="64" font-weight="800" fill="#2563eb">G</text>
+  <g stroke="#2563eb" stroke-width="2.5" fill="#2563eb">
+    <line x1="42" y1="28" x2="42" y2="14"/>
+    <circle cx="42" cy="12" r="3.5"/>
+    <line x1="78" y1="68" x2="96" y2="68"/>
+    <circle cx="98" cy="68" r="3.5"/>
+  </g>
+  <text x="128" y="78" font-family="Menlo, Consolas, monospace" font-size="18" font-weight="500" fill="#000000">adaptive runtime protection</text>
+</svg>

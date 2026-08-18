@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://pgcircuit.com/docs
+    about: Product docs and guides on the website
+  - name: Security vulnerability
+    url: https://github.com/PG-Circuit/pg-circuit/security/advisories/new
+    about: Report security issues privately (or email security@pgcircuit.com)
+  - name: Website / sales
+    url: https://pgcircuit.com
+    about: Commercial Pro / Cloud / Enterprise questions → sales@pgcircuit.com

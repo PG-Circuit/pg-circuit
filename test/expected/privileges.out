@@ -26,3 +26,4 @@ SHOW pg_circuit.fail_closed;
 ------------------------
  off
 (1 row)
+

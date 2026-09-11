@@ -42,3 +42,4 @@ SHOW pg_circuit.debug;
 ------------------
  off
 (1 row)
+

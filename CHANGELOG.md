@@ -13,3 +13,6 @@ All notable changes to **PG Circuit Community** are documented in this file.
 - SQL APIs: `version`, `status`, `runtime_state`, `explain_risk`, `explain_risk_ex`, `blockers`, `lock_summary`, `events`
 - Go CLI: `status`, `runtime`, `blockers`, `events`, `doctor`, `version`
 - Policy / assess / incident / custom-rules / fleet APIs are **not** included (Pro)
+
+### Release
+- Public Community 0.1.0 cut on 2026-09-11.

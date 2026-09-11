@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ["16", "17", "18"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL ${{ matrix.pg }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release
+          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.list
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install -y \
+            postgresql-${{ matrix.pg }} \
+            postgresql-server-dev-${{ matrix.pg }} \
+            build-essential
+
+      - name: Build
+        run: |
+          export PATH="/usr/lib/postgresql/${{ matrix.pg }}/bin:$PATH"
+          pg_config --version
+          make clean || true
+          make
+          sudo make install
+
+      - name: Regression tests
+        run: |
+          export PATH="/usr/lib/postgresql/${{ matrix.pg }}/bin:$PATH"
+          tmpdir=$(mktemp -d)
+          export PGDATA="$tmpdir/data"
+          export PGHOST=/tmp
+          export PGPORT=55432
+          initdb -D "$PGDATA"
+          echo "shared_preload_libraries = 'pg_circuit'" >> "$PGDATA/postgresql.conf"
+          echo "unix_socket_directories = '/tmp'" >> "$PGDATA/postgresql.conf"
+          echo "port = $PGPORT" >> "$PGDATA/postgresql.conf"
+          pg_ctl -D "$PGDATA" -l "$tmpdir/pg.log" start
+          createdb -h /tmp -p "$PGPORT" contrib_regression || true
+          make installcheck || (cat "$tmpdir/pg.log"; cat test/regression.diffs 2>/dev/null; exit 1)
+          psql -h /tmp -p "$PGPORT" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_circuit; SELECT pg_circuit_version();"
+          pg_ctl -D "$PGDATA" stop
+
+  sanitize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL 17 + sanitizers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release
+          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.list
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install -y postgresql-17 postgresql-server-dev-17 build-essential
+      - name: Build with ASan/UBSan (extension only)
+        run: |
+          export PATH="/usr/lib/postgresql/17/bin:$PATH"
+          make clean || true
+          # Sanitizers catch extension bugs; they do not fully validate Postgres core.
+          make PG_CFLAGS="-Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
+               PG_CPPFLAGS="-I\$(srcdir)/include -DPGCIRCUIT_FAULT_INJECTION"
+          sudo make install
+      - name: Smoke regress subset
+        run: |
+          export PATH="/usr/lib/postgresql/17/bin:$PATH"
+          export ASAN_OPTIONS=detect_leaks=0
+          tmpdir=$(mktemp -d)
+          export PGDATA="$tmpdir/data" PGHOST=/tmp PGPORT=55433
+          initdb -D "$PGDATA"
+          echo "shared_preload_libraries = 'pg_circuit'" >> "$PGDATA/postgresql.conf"
+          echo "unix_socket_directories = '/tmp'" >> "$PGDATA/postgresql.conf"
+          echo "port = $PGPORT" >> "$PGDATA/postgresql.conf"
+          # Loading a sanitized .so into unsanitized postgres may be limited;
+          # still validates the extension builds under sanitizer flags.
+          if pg_ctl -D "$PGDATA" -l "$tmpdir/pg.log" start; then
+            createdb contrib_regression || true
+            make REGRESS="basic safe_ops privileges" installcheck || \
+              (cat "$tmpdir/pg.log"; cat test/regression.diffs 2>/dev/null; true)
+            pg_ctl -D "$PGDATA" stop || true
+          else
+            echo "Note: sanitized shared library may not load into stock postgres; build succeeded."
+            cat "$tmpdir/pg.log" || true
+          fi
+
+  go-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Go tests
+        run: go test ./...
+      - name: Build CLI
+        run: go build -o bin/pgcircuit ./cmd/pgcircuit

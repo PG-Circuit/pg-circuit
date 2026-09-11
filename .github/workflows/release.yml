@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - name: Build CLI matrix
+        run: |
+          mkdir -p dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          for os in linux darwin; do
+            for arch in amd64 arm64; do
+              out="dist/pgcircuit_${VERSION}_${os}_${arch}"
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
+                go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
+                -o "$out" ./cmd/pgcircuit
+            done
+          done
+          tar -czf "dist/pg-circuit-${VERSION}-src.tar.gz" \
+            --exclude .git --exclude dist --exclude bin --exclude '*.o' --exclude '*.dylib' .
+          (cd dist && sha256sum * > SHA256SUMS)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

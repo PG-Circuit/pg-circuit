@@ -13,10 +13,12 @@ ERROR:  PG Circuit [PGC001] blocked high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 3
 Relation: public.dest_users
+Operating mode: enforce
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 -- DELETE with WHERE => allowed
 DELETE FROM dest_users WHERE id = 1;
 SELECT count(*) FROM dest_users;
@@ -31,10 +33,12 @@ ERROR:  PG Circuit [PGC002] blocked high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 3
 Relation: public.dest_users
+Operating mode: enforce
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 -- UPDATE with WHERE => allowed
 UPDATE dest_users SET active = false WHERE id = 2;
 SELECT active FROM dest_users ORDER BY id;
@@ -50,20 +54,24 @@ ERROR:  PG Circuit [PGC003] blocked high-risk operation
 DETAIL:  Risk: 90/100
 Estimated rows: 3
 Relation: public.dest_users
+Operating mode: enforce
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 -- PGC004 DROP TABLE => blocked
 DROP TABLE dest_users;
 ERROR:  PG Circuit [PGC004] blocked high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 3
 Relation: public.dest_users
+Operating mode: enforce
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 -- WHERE-qualified DML stays quiet in Community (no blast-radius rules)
 CREATE TABLE tiny_demo AS SELECT g AS id FROM generate_series(1, 5) g;
 ANALYZE tiny_demo;

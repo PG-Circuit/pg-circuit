@@ -98,6 +98,9 @@ func CmdStatus(ctx context.Context, c *Client, cfg Config) int {
 	fmt.Printf("Enabled:          %v\n", row.Enabled)
 	fmt.Printf("Warn threshold:   %d\n", row.RiskWarnThreshold)
 	fmt.Printf("Block threshold:  %d\n", row.RiskBlockThreshold)
+	fmt.Println()
+	fmt.Println("Note: Community effective runtime mode is always NORMAL;")
+	fmt.Println("      pressure remains visible via `pgcircuit runtime`.")
 	return 0
 }
 
@@ -146,6 +149,8 @@ func CmdRuntime(ctx context.Context, c *Client, cfg Config) int {
 	fmt.Printf("Idle in xact:     %d\n", row.IdleInTransaction)
 	fmt.Printf("WAL pressure:     %s\n", row.WalPressure)
 	fmt.Printf("WAL bytes/sec:    %.0f\n", row.WalBytesPerSec)
+	fmt.Println()
+	fmt.Println("Note: Community does not escalate from pressure; score is display-only.")
 	return 0
 }
 
@@ -284,13 +289,17 @@ func CmdDoctor(ctx context.Context, c *Client, cfg Config) int {
 	}
 
 	if report.ExtensionInstalled {
-		_, err := fetchStatus(ctx, c)
+		status, err := fetchStatus(ctx, c)
 		if err != nil {
 			report.CanInspect = false
 			report.Warnings = append(report.Warnings, "pg_circuit_status() failed: "+err.Error())
 		} else {
 			report.CanInspect = true
 			report.Checks = append(report.Checks, "SQL inspection APIs callable")
+			if !strings.EqualFold(status.ConfiguredRuntimeMode, "normal") {
+				report.Warnings = append(report.Warnings,
+					"configured runtime_mode="+status.ConfiguredRuntimeMode+" is ignored in Community (effective mode stays NORMAL)")
+			}
 		}
 		_, err = fetchRuntime(ctx, c)
 		if err != nil {
@@ -319,6 +328,10 @@ func CmdDoctor(ctx context.Context, c *Client, cfg Config) int {
 	}
 	if report.OK {
 		fmt.Println("\nOverall: healthy")
+		fmt.Println()
+		fmt.Println("Operator loop when something is blocked:")
+		fmt.Println("  pgcircuit status → runtime → events")
+		fmt.Println("  SQL: SELECT * FROM pg_circuit_explain_risk('delete_no_where', 0, 0, 'normal', 0);")
 		return 0
 	}
 	fmt.Println("\nOverall: issues found")

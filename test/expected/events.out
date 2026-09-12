@@ -11,10 +11,12 @@ WARNING:  PG Circuit [PGC001] high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 5
 Relation: public.events_demo
+Operating mode: warn
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: WARN
-HINT:  set pg_circuit.mode=enforce to block, or reduce the operation scope
+HINT:  set pg_circuit.mode=enforce to block, or reduce scope; inspect with pg_circuit_events() / pg_circuit_explain_risk(...)
 SELECT count(*) >= 1 AS has_event
 FROM pg_circuit_events();
  has_event 

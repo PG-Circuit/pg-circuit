@@ -1,8 +1,8 @@
 name: CI
 
+# Temporarily disabled — re-enable push/pull_request when ready.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:

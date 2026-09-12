@@ -18,10 +18,12 @@ WARNING:  PG Circuit [PGC001] high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 3
 Relation: public.mode_demo
+Operating mode: warn
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: WARN
-HINT:  set pg_circuit.mode=enforce to block, or reduce the operation scope
+HINT:  set pg_circuit.mode=enforce to block, or reduce scope; inspect with pg_circuit_events() / pg_circuit_explain_risk(...)
 SELECT count(*) FROM mode_demo;
  count 
 -------
@@ -37,10 +39,12 @@ ERROR:  PG Circuit [PGC001] blocked high-risk operation
 DETAIL:  Risk: 95/100
 Estimated rows: 3
 Relation: public.mode_demo
+Operating mode: enforce
 Runtime mode: NORMAL
+Pressure: 0/100
 Replication lag: 0.0s
 Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 SELECT count(*) FROM mode_demo;
  count 
 -------

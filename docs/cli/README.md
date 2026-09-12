@@ -31,11 +31,13 @@ pgcircuit status
 | Command | Purpose |
 |---------|---------|
 | `status` | Extension version, mode, thresholds |
-| `runtime` | Pressure score, lag, WAL pressure |
+| `runtime` | Pressure score, lag, WAL pressure (display-only in Community) |
 | `blockers` | Current lock wait edges |
 | `events` | Bounded WARN/BLOCK history |
-| `doctor` | Non-destructive health checks |
+| `doctor` | Health checks + operator-loop tip |
 | `version` | CLI version |
+
+**When blocked:** `doctor` → `status` → `runtime` → `events`, then SQL `pg_circuit_explain_risk(...)`.
 
 Pro-only CLI surfaces (policy, preflight, snapshot, incident, …) are not part of Community.
 
@@ -54,8 +56,9 @@ pgcircuit status --format json
 - supported server major version (16–18)
 - `pg_circuit` extension installed
 - SQL inspection APIs callable
+- warns if `runtime_mode` is set to a non-`normal` value (ignored in Community)
 
-It does not change configuration or data.
+It does not change configuration or data. On success it prints the status → runtime → events loop and an `explain_risk` example.
 
 ## Security model
 

@@ -31,7 +31,7 @@ Documented on [pgcircuit.com/pricing](https://pgcircuit.com/pricing):
 
 | Edition | What it is |
 |---------|------------|
-| **Pro** | Extended on-box engine + official binaries (policies, blast-radius, workflows, migration checks, richer audit) |
+| **Pro** | Extended on-box engine + official binaries (policies, blast-radius, local policy exceptions, migration checks, richer audit) |
 | **Cloud** | Hosted control plane, fleet UI, agents |
 | **Enterprise** | Support contract + engagement on the official line (available without Cloud) |
 

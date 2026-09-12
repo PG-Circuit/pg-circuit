@@ -341,6 +341,8 @@ pg_circuit_format_pressure_contributors(const PgCircuitRuntimeState *state)
 	initStringInfo(&buf);
 	appendStringInfo(&buf, "effective_mode: %s\n",
 					 pg_circuit_safety_mode_name(state->mode));
+	appendStringInfoString(&buf,
+						   "note: Community effective mode is always NORMAL; pressure is display-only\n");
 	appendStringInfo(&buf, "pressure_score: %d\n", state->pressure_score);
 	appendStringInfoString(&buf, "contributors:\n");
 	for (i = 0; i < n; i++)

@@ -14,6 +14,7 @@ WARN/BLOCK decisions are stored in a **shared-memory ring buffer**:
 Transaction, lock, replication, WAL, and connection signals are collected for
 `pg_circuit_runtime_state()` and the CLI. Community always reports safety mode
 **NORMAL** (no AUTO→PROTECT/EMERGENCY transitions or incident correlation).
+`pressure_explain` states this explicitly while still listing pressure contributors.
 
 ## WAL pressure
 

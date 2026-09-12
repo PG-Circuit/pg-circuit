@@ -76,11 +76,15 @@ Usage:
 
 Commands:
   status     Extension and operating mode
-  runtime    Runtime pressure and WAL signals
+  runtime    Runtime pressure and WAL signals (display-only in Community)
   blockers   Current lock blocker edges
   events     Recent WARN/BLOCK event history
-  doctor     Connectivity and configuration checks
+  doctor     Connectivity checks + operator-loop tip
   version    CLI version
+
+When blocked (operator loop):
+  doctor → status → runtime → events
+  SQL why: SELECT * FROM pg_circuit_explain_risk(...);
 
 Connection (first match wins):
   --dsn

@@ -6,6 +6,15 @@ Community **0.1.0** is a fresh SQL script (`sql/pg_circuit--0.1.0.sql`) with no
 upgrade path from prior internal builds. Prefer `DROP EXTENSION` / reinstall
 when iterating during development.
 
+## Install constraints
+
+Hooks and the in-memory event ring require `shared_preload_libraries = 'pg_circuit'`
+**and a restart**. `CREATE EXTENSION` is still required after preload.
+
+Managed Postgres services (RDS, Aurora, Cloud SQL, Azure Database, …) often
+cannot load arbitrary shared libraries — prefer Docker or self-hosted Postgres
+for Community installs.
+
 ## Privilege model
 
 | Capability | Who |

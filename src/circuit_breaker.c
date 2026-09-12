@@ -54,14 +54,16 @@ append_grouped_u64(StringInfo buf, uint64 value)
 /*
  * Compact operator-facing DETAIL template (shared by ERROR and WARNING):
  *
- *   Risk: 89/100
- *   Estimated rows: 48,192,211
- *   Relation: public.events
- *   Runtime mode: PROTECT
- *   Replication lag: 18.2s
- *   Long transactions: 2
- *   Policy: maint-window (outside-maintenance-window)
+ *   Risk: 95/100
+ *   Estimated rows: 3
+ *   Relation: public.users
+ *   Operating mode: enforce
+ *   Runtime mode: NORMAL
+ *   Pressure: 12/100
+ *   Replication lag: 0.0s
  *   Decision: BLOCK
+ *
+ * Community: effective runtime mode stays NORMAL; pressure is display-only.
  */
 static void
 format_decision_detail(StringInfo detail,
@@ -86,8 +88,11 @@ format_decision_detail(StringInfo detail,
 			 strcmp(qinfo->relation_name, "?") != 0)
 		appendStringInfo(detail, "\nRelation: %s", qinfo->relation_name);
 
+	appendStringInfo(detail, "\nOperating mode: %s",
+					 pg_circuit_mode_name(pg_circuit_mode));
 	appendStringInfo(detail, "\nRuntime mode: %s",
 					 pg_circuit_safety_mode_name(runtime->mode));
+	appendStringInfo(detail, "\nPressure: %d/100", runtime->pressure_score);
 	appendStringInfo(detail, "\nReplication lag: %.1fs",
 					 runtime->max_replication_lag_seconds);
 
@@ -142,12 +147,12 @@ pg_circuit_apply_decision_ex(const PgCircuitRiskAssessment *assessment,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("PG Circuit [%s] blocked high-risk operation", rule),
 				 errdetail("%s", detail.data),
-				 errhint("retry in smaller batches, adjust thresholds, or wait until database pressure drops")));
+				 errhint("retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold")));
 	}
 
 	ereport(WARNING,
 			(errcode(ERRCODE_WARNING),
 			 errmsg("PG Circuit [%s] high-risk operation", rule),
 			 errdetail("%s", detail.data),
-			 errhint("set pg_circuit.mode=enforce to block, or reduce the operation scope")));
+			 errhint("set pg_circuit.mode=enforce to block, or reduce scope; inspect with pg_circuit_events() / pg_circuit_explain_risk(...)")));
 }

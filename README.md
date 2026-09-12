@@ -57,12 +57,15 @@ ERROR:  PG Circuit [PGC001] blocked high-risk operation
 DETAIL:  Risk: 95/100
         Estimated rows: 3
         Relation: public.users
+        Operating mode: enforce
         Runtime mode: NORMAL
+        Pressure: 0/100
         Replication lag: 0.0s
         Decision: BLOCK
-HINT:  retry in smaller batches, adjust thresholds, or wait until database pressure drops
+HINT:  retry in smaller batches (add WHERE); then SELECT * FROM pg_circuit_events() and pg_circuit_explain_risk(...); adjust pg_circuit.mode or risk_*_threshold
 ```
 
+Community effective runtime mode stays **NORMAL**. Pressure may still appear in DETAIL / `pg_circuit_runtime_state()` — it is display-only and does not escalate mode.
 ---
 
 ## Why not “just another guardrail”
@@ -101,12 +104,17 @@ Community always reports effective runtime mode **NORMAL**. Pressure signals are
 
 ## Quick start
 
+**Simplest path:** Docker (preloads `pg_circuit` for you). After install you still need `CREATE EXTENSION`, then a WARN/BLOCK smoke test below.
+
+Hooks and the in-memory event ring require `shared_preload_libraries = 'pg_circuit'` **and a PostgreSQL restart**. Managed Postgres (RDS, Aurora, Cloud SQL, …) often cannot load custom preload libraries — use self-hosted or Docker.
+
 <details open>
 <summary><strong>Docker</strong> (recommended)</summary>
 
 ```bash
 docker compose build
 docker compose up -d
+# compose maps host port 54329 → 5432
 docker compose exec postgres psql -U postgres -c "CREATE EXTENSION pg_circuit;"
 ```
 
@@ -118,7 +126,7 @@ docker compose exec postgres psql -U postgres -c "CREATE EXTENSION pg_circuit;"
 ```bash
 make && sudo make install
 # postgresql.conf → shared_preload_libraries = 'pg_circuit'
-# restart PostgreSQL
+# REQUIRED: restart PostgreSQL after changing shared_preload_libraries
 psql -c "CREATE EXTENSION pg_circuit;"
 ```
 
@@ -133,7 +141,7 @@ export PATH="$(brew --prefix postgresql@17)/bin:$PATH"
 make && make install
 ```
 
-Confirm install paths with `pg_config --sharedir` / `pg_config --pkglibdir`. Restart PostgreSQL after setting `shared_preload_libraries`.
+Confirm install paths with `pg_config --sharedir` / `pg_config --pkglibdir`. Restart PostgreSQL after setting `shared_preload_libraries`, then `CREATE EXTENSION pg_circuit;`.
 
 </details>
 
@@ -147,6 +155,20 @@ INSERT INTO users VALUES (1);
 SET pg_circuit.mode = enforce;
 DELETE FROM users;              -- blocked: PGC001
 DELETE FROM users WHERE id = 1; -- allowed
+```
+
+### When blocked (operator loop)
+
+```text
+pgcircuit doctor
+pgcircuit status          -- mode + thresholds (effective runtime = NORMAL)
+pgcircuit runtime         -- pressure display-only in Community
+pgcircuit events          -- recent WARN/BLOCK
+```
+
+```sql
+SELECT * FROM pg_circuit_events();
+SELECT * FROM pg_circuit_explain_risk('delete_no_where', 0, 0, 'normal', 0);
 ```
 
 ---
@@ -228,8 +250,8 @@ SELECT * FROM pg_circuit_lock_summary();
 
 ```sql
 SELECT pg_circuit_version();
-SELECT * FROM pg_circuit_status();
-SELECT * FROM pg_circuit_runtime_state();
+SELECT * FROM pg_circuit_status();        -- mode + configured/effective runtime (effective = NORMAL)
+SELECT * FROM pg_circuit_runtime_state(); -- pressure_score + pressure_explain (display-only)
 SELECT * FROM pg_circuit_events();
 
 SELECT * FROM pg_circuit_explain_risk('delete_no_where', 0, 0, 'normal', 0);
@@ -238,6 +260,8 @@ SELECT * FROM pg_circuit_explain_risk_ex(
 SELECT * FROM pg_circuit_blockers();
 SELECT * FROM pg_circuit_lock_summary();
 ```
+
+`pressure_explain` states that Community effective mode is always NORMAL while listing pressure contributors.
 
 ---
 
@@ -325,9 +349,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 |--|----------------------|
 | License | Apache 2.0 — free forever |
 | Scope | Dangerous SQL / DDL floor, local config, basic CLI, on-box logs |
+| Runtime | Effective mode always NORMAL; pressure visible but display-only |
 | Phone-home | Never |
 
-Pro, Cloud, and Enterprise are commercial offerings on [pgcircuit.com](https://pgcircuit.com) — not part of this repository. Brand: [TRADEMARK.md](TRADEMARK.md). Packaging summary: [PACKAGING.md](PACKAGING.md).
+Pro adds on-box policies, blast-radius, assess/preflight, incidents, and richer runtime. Cloud / Enterprise are separate commercial offerings on [pgcircuit.com](https://pgcircuit.com) — not part of this repository. Brand: [TRADEMARK.md](TRADEMARK.md). Packaging: [PACKAGING.md](PACKAGING.md).
 
 ---
 

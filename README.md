@@ -31,8 +31,9 @@
 - SQL parsing and basic dangerous-query detection
 - `UPDATE` / `DELETE` without `WHERE`, `TRUNCATE`, `DROP`
 - Destructive DDL rules (ALTER / INDEX / REINDEX / VACUUM FULL / CLUSTER)
-- Local config + basic CLI (`status`, `runtime`, `blockers`, `events`, `doctor`)
+- Local config + basic CLI (`status`, `runtime`, `blockers`, `events`, `doctor`, `metrics`, `notify`)
 - On-box WARN/BLOCK event history
+- Optional Prometheus scrape + webhook notify (CLI; extension never phones home)
 
 > Basic dangerous-query protection stays free forever. No phone-home license check.
 
@@ -275,6 +276,9 @@ pgcircuit runtime --format json
 pgcircuit blockers
 pgcircuit events
 pgcircuit doctor
+pgcircuit metrics                      # Prometheus text
+pgcircuit metrics --listen :9187       # scrape GET /metrics
+pgcircuit notify --url "$WEBHOOK_URL"  # POST on new BLOCK
 ```
 
 <p align="center">

@@ -8,7 +8,7 @@ import (
 	"github.com/PG-Circuit/pg-circuit/internal/cli"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 func main() {
 	os.Exit(run(os.Args[1:]))
@@ -37,7 +37,26 @@ func run(args []string) int {
 		return 0
 	}
 
+	needsDB := true
+	switch cmd {
+	case "check-sql":
+		needsDB = false
+	case "break-glass":
+		if len(cmdArgs) > 0 && cmdArgs[0] == "print" {
+			needsDB = false
+		}
+	}
+
 	ctx := context.Background()
+	if !needsDB {
+		switch cmd {
+		case "check-sql":
+			return cli.CmdCheckSQL(cfg, cmdArgs)
+		case "break-glass":
+			return cli.CmdBreakGlass(ctx, nil, cfg, cmdArgs)
+		}
+	}
+
 	client, err := cli.Connect(ctx, cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -54,6 +73,12 @@ func run(args []string) int {
 		return cli.CmdBlockers(ctx, client, cfg)
 	case "events":
 		return cli.CmdEvents(ctx, client, cfg, cmdArgs)
+	case "metrics":
+		return cli.CmdMetrics(ctx, client, cfg, cmdArgs)
+	case "notify":
+		return cli.CmdNotify(ctx, client, cfg, cmdArgs)
+	case "break-glass":
+		return cli.CmdBreakGlass(ctx, client, cfg, cmdArgs)
 	case "doctor":
 		return cli.CmdDoctor(ctx, client, cfg)
 	default:

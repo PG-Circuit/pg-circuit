@@ -21,7 +21,9 @@ Marketing pages on [pgcircuit.com](https://pgcircuit.com) must match this docume
 - SQL parsing and basic dangerous-query detection
 - `UPDATE` / `DELETE` without `WHERE`
 - Destructive DDL rules
-- Local config + basic CLI
+- Local config + basic CLI (`status`, `runtime`, `blockers`, `events`, `doctor`, `metrics`, `notify`)
+- Prometheus metrics exporter (`pgcircuit metrics`)
+- Optional BLOCK/WARN webhook watcher (`pgcircuit notify`) — CLI egress only; extension never phones home
 - Basic on-box logs
 - Best-effort support via GitHub Issues
 

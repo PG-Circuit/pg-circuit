@@ -1,0 +1,64 @@
+name: PG Circuit warn migrations
+description: Static Community warn scan for dangerous SQL shapes in migration files.
+inputs:
+  files:
+    description: Space-separated SQL files or globs.
+    required: true
+  fail-on-findings:
+    description: Fail the job when findings exist (default warn-only = false).
+    required: false
+    default: "false"
+  version:
+    description: Download this Community CLI release (e.g. 0.1.1). Empty = build from checkout.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      if: ${{ inputs.version == '' }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.22.x"
+
+    - name: Install pgcircuit
+      shell: bash
+      env:
+        PGC_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        mkdir -p "${RUNNER_TEMP}/pgcircuit-bin"
+        out="${RUNNER_TEMP}/pgcircuit-bin/pgcircuit"
+        if [[ -n "${PGC_VERSION}" ]]; then
+          os=$(uname -s | tr '[:upper:]' '[:lower:]')
+          arch=$(uname -m)
+          case "$arch" in
+            x86_64|amd64) arch=amd64 ;;
+            aarch64|arm64) arch=arm64 ;;
+            *) echo "unsupported arch: $arch"; exit 1 ;;
+          esac
+          url="https://github.com/PG-Circuit/pg-circuit/releases/download/v${PGC_VERSION}/pgcircuit_${PGC_VERSION}_${os}_${arch}.tar.gz"
+          echo "Downloading $url"
+          curl -fsSL "$url" | tar -xz -C "${RUNNER_TEMP}/pgcircuit-bin"
+          chmod +x "${RUNNER_TEMP}/pgcircuit-bin/pgcircuit" || chmod +x "${out}"
+        else
+          (cd "${GITHUB_ACTION_PATH}/../../.." && go build -o "${out}" ./cmd/pgcircuit)
+        fi
+        echo "${RUNNER_TEMP}/pgcircuit-bin" >> "$GITHUB_PATH"
+        pgcircuit version
+
+    - name: Warn-scan migrations
+      shell: bash
+      env:
+        FAIL: ${{ inputs.fail-on-findings }}
+        FILES: ${{ inputs.files }}
+      run: |
+        set -euo pipefail
+        # shellcheck disable=SC2086
+        set -- $FILES
+        args=()
+        if [[ "${FAIL}" == "true" ]]; then
+          args+=(--fail-on-findings)
+        fi
+        pgcircuit --format text check-sql "${args[@]}" "$@"

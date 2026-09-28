@@ -55,6 +55,8 @@ type EventRow struct {
 	RuntimeMode   string  `json:"runtime_mode"`
 	Decision      string  `json:"decision"`
 	RuleIDs       *string `json:"rule_ids"`
+	EventID       int64   `json:"event_id"`
+	Fingerprint   *string `json:"fingerprint,omitempty"`
 }
 
 type DoctorReport struct {
@@ -215,27 +217,8 @@ func CmdBlockers(ctx context.Context, c *Client, cfg Config) int {
 }
 
 func CmdEvents(ctx context.Context, c *Client, cfg Config, _ []string) int {
-	rows, err := c.Conn.Query(ctx, `
-		SELECT event_time, pid, database_name, user_name, operation_type,
-		       relation_name, risk_score, risk_level, runtime_mode, decision, rule_ids
-		FROM pg_circuit_events()`)
+	out, err := fetchEvents(ctx, c)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return 1
-	}
-	defer rows.Close()
-
-	var out []EventRow
-	for rows.Next() {
-		var r EventRow
-		if err := rows.Scan(&r.EventTime, &r.PID, &r.DatabaseName, &r.UserName, &r.OperationType,
-			&r.RelationName, &r.RiskScore, &r.RiskLevel, &r.RuntimeMode, &r.Decision, &r.RuleIDs); err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			return 1
-		}
-		out = append(out, r)
-	}
-	if err := rows.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return 1
 	}
@@ -254,10 +237,34 @@ func CmdEvents(ctx context.Context, c *Client, cfg Config, _ []string) int {
 		if r.RuleIDs != nil {
 			rules = *r.RuleIDs
 		}
-		fmt.Printf("%v pid=%d %s score=%d mode=%s decision=%s rules=%s\n",
-			r.EventTime, r.PID, r.OperationType, r.RiskScore, r.RuntimeMode, r.Decision, rules)
+		fmt.Printf("%v id=%d pid=%d %s score=%d mode=%s decision=%s rules=%s\n",
+			r.EventTime, r.EventID, r.PID, r.OperationType, r.RiskScore, r.RuntimeMode, r.Decision, rules)
 	}
 	return 0
+}
+
+func fetchEvents(ctx context.Context, c *Client) ([]EventRow, error) {
+	rows, err := c.Conn.Query(ctx, `
+		SELECT event_time, pid, database_name, user_name, operation_type,
+		       relation_name, risk_score, risk_level, runtime_mode, decision, rule_ids,
+		       event_id, fingerprint
+		FROM pg_circuit_events()`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []EventRow
+	for rows.Next() {
+		var r EventRow
+		if err := rows.Scan(&r.EventTime, &r.PID, &r.DatabaseName, &r.UserName, &r.OperationType,
+			&r.RelationName, &r.RiskScore, &r.RiskLevel, &r.RuntimeMode, &r.Decision, &r.RuleIDs,
+			&r.EventID, &r.Fingerprint); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 func CmdDoctor(ctx context.Context, c *Client, cfg Config) int {
@@ -332,6 +339,7 @@ func CmdDoctor(ctx context.Context, c *Client, cfg Config) int {
 		fmt.Println("Operator loop when something is blocked:")
 		fmt.Println("  pgcircuit status → runtime → events")
 		fmt.Println("  SQL: SELECT * FROM pg_circuit_explain_risk('delete_no_where', 0, 0, 'normal', 0);")
+		fmt.Println("Optional: pgcircuit metrics | notify --url …")
 		return 0
 	}
 	fmt.Println("\nOverall: issues found")

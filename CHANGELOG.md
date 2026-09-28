@@ -2,6 +2,17 @@
 
 All notable changes to **PG Circuit Community** are documented in this file.
 
+## Unreleased
+
+### CLI (0.1.1)
+- `pgcircuit metrics` — Prometheus text (one-shot or `--listen :9187` scrape endpoint)
+- `pgcircuit notify` — poll `pg_circuit_events()` and POST JSON webhooks on new BLOCK (optional WARN)
+- `pgcircuit break-glass print|check` — ticketed session override snippet + observe-mode guard
+- `pgcircuit check-sql` — static warn scan for migration SQL (CI)
+- GitHub Action: `.github/actions/warn-migrations`
+- SSRF hardening on notify URLs (bypass with `--allow-private` for local hooks)
+- `events` text/JSON output includes `event_id`
+
 ## 0.1.0
 
 ### Community release

@@ -75,16 +75,38 @@ Usage:
   pgcircuit [--dsn DSN] [--format text|json] <command>
 
 Commands:
-  status     Extension and operating mode
-  runtime    Runtime pressure and WAL signals (display-only in Community)
-  blockers   Current lock blocker edges
-  events     Recent WARN/BLOCK event history
-  doctor     Connectivity checks + operator-loop tip
-  version    CLI version
+  status       Extension and operating mode
+  runtime      Runtime pressure and WAL signals (display-only in Community)
+  blockers     Current lock blocker edges
+  events       Recent WARN/BLOCK event history
+  metrics      Prometheus text (--listen :9187 for scrape endpoint)
+  notify       Watch events and POST webhooks on BLOCK (optional WARN)
+  break-glass  print|check — ticketed session override helpers
+  check-sql    Static warn scan of migration SQL files (CI)
+  doctor       Connectivity checks + operator-loop tip
+  version      CLI version
 
 When blocked (operator loop):
   doctor → status → runtime → events
   SQL why: SELECT * FROM pg_circuit_explain_risk(...);
+
+Metrics:
+  pgcircuit metrics
+  pgcircuit metrics --listen :9187
+
+Notify (webhook on new BLOCK):
+  pgcircuit notify --url https://hooks.example/pg-circuit
+  PGCIRCUIT_WEBHOOK_URL=… pgcircuit notify --decisions BLOCK,WARN
+  pgcircuit notify --url … --dry-run --catch-up
+  pgcircuit notify --url http://127.0.0.1:9000/hook --allow-private
+
+Break-glass (Community):
+  pgcircuit break-glass print --reason INC-123 --ttl 15m
+  pgcircuit break-glass check
+
+CI warn gate:
+  pgcircuit check-sql migrations/*.sql
+  pgcircuit check-sql --fail-on-findings db/migrate/*.sql
 
 Connection (first match wins):
   --dsn

@@ -61,8 +61,13 @@ pg_circuit_collect_wal_signals(PgCircuitRuntimeState *state)
 	if (ws == NULL)
 		return;
 
+#if PG_VERSION_NUM >= 180000
+	pg_circuit_wal_sample_update(ws->wal_counters.wal_bytes, GetCurrentTimestamp(),
+								 &bps, &level);
+#else
 	pg_circuit_wal_sample_update(ws->wal_bytes, GetCurrentTimestamp(),
 								 &bps, &level);
+#endif
 	state->wal_bytes_per_sec = bps;
 	state->wal_pressure_level = level;
 }

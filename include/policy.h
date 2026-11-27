@@ -9,6 +9,7 @@
 #define PG_CIRCUIT_POLICY_H
 
 #include "pg_circuit.h"
+#include "datatype/timestamp.h"
 #include "risk_engine.h"
 #include "runtime_state.h"
 
